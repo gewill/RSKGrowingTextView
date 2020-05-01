@@ -17,38 +17,25 @@
 import RSKPlaceholderTextView
 import UIKit
 
-/// The type of the block which contains user defined actions that will run during the height change.
+// 高度变化的闭包
 public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ newHeight: CGFloat) -> Void)
 
-/// The `RSKGrowingTextViewDelegate` protocol extends the `UITextViewDelegate` protocol by providing a set of optional methods you can use to receive messages related to the change of the height of `RSKGrowingTextView` objects.
+/// 拓展 `UITextViewDelegate`
 @objc public protocol RSKGrowingTextViewDelegate: UITextViewDelegate {
-    ///
-    /// Tells the delegate that the growing text view did change height.
-    ///
-    /// - Parameters:
-    ///     - textView: The growing text view object that has changed the height.
-    ///     - growingTextViewHeightBegin: CGFloat that identifies the start height of the growing text view.
-    ///     - growingTextViewHeightEnd: CGFloat that identifies the end height of the growing text view.
-    ///
+    // 高度已经变化
     @objc optional func growingTextView(_ textView: RSKGrowingTextView, didChangeHeightFrom growingTextViewHeightBegin: CGFloat, to growingTextViewHeightEnd: CGFloat)
-    
-    ///
-    /// Tells the delegate that the growing text view will change height.
-    ///
-    /// - Parameters:
-    ///     - textView: The growing text view object that will change the height.
-    ///     - growingTextViewHeightBegin: CGFloat that identifies the start height of the growing text view.
-    ///     - growingTextViewHeightEnd: CGFloat that identifies the end height of the growing text view.
-    ///
+
+    // 高度将要变化
     @objc optional func growingTextView(_ textView: RSKGrowingTextView, willChangeHeightFrom growingTextViewHeightBegin: CGFloat, to growingTextViewHeightEnd: CGFloat)
 }
 
-/// A light-weight UITextView subclass that automatically grows and shrinks based on the size of user input and can be constrained by maximum and minimum number of lines.
+/// 轻量的子类
 @IBDesignable open class RSKGrowingTextView: RSKPlaceholderTextView {
-    
     // MARK: - Private Properties
-    
+
+    /// 计算高度
     private var calculatedHeight: CGFloat {
+        // A -> NSTextStorage
         let calculationTextStorage: NSTextStorage?
         if let attributedText = attributedText, attributedText.length > 0 {
             calculationTextStorage = NSTextStorage(attributedString: attributedText)
@@ -59,16 +46,20 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
         }
         var height: CGFloat
         if let _calculationTextStorage = calculationTextStorage {
-            
+            // B -> NSLayoutManager
             _calculationTextStorage.addLayoutManager(calculationLayoutManager)
-            
+
+            // C -> NSTextContainer
             calculationTextContainer.lineFragmentPadding = textContainer.lineFragmentPadding
-            calculationTextContainer.size = CGSize(width: textContainer.size.width, height: 0.0) 
-            
+            calculationTextContainer.size = CGSize(width: textContainer.size.width, height: 0.0)
+
+            // D 开始计算布局
             calculationLayoutManager.ensureLayout(for: calculationTextContainer)
-            
+
+            // E 算出高度
             height = ceil(calculationLayoutManager.usedRect(for: calculationTextContainer).height + contentInset.top + contentInset.bottom + textContainerInset.top + textContainerInset.bottom)
-            
+
+            // F 处理高度的范围
             if height < minHeight {
                 height = minHeight
             } else if height > maxHeight {
@@ -79,31 +70,31 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
         }
         return height
     }
-    
+
     private let calculationLayoutManager = NSLayoutManager()
-    
+
     private let calculationTextContainer = NSTextContainer()
-    
+
     private weak var heightConstraint: NSLayoutConstraint?
-    
+
     private var maxHeight: CGFloat { return heightForNumberOfLines(maximumNumberOfLines) }
-    
+
     private var minHeight: CGFloat { return heightForNumberOfLines(minimumNumberOfLines) }
-    
+
     // MARK: - Open Properties
-    
+
     /// A Boolean value that determines whether the animation of the height change is enabled. Default value is `true`.
     @IBInspectable open var animateHeightChange: Bool = true
-    
+
     /// The receiver's delegate.
     @objc open weak var growingTextViewDelegate: RSKGrowingTextViewDelegate? { didSet { delegate = growingTextViewDelegate } }
-    
+
     /// The duration of the animation of the height change. The default value is `0.35`.
     @IBInspectable open var heightChangeAnimationDuration: Double = 0.35
-    
+
     /// The block which contains user defined actions that will run during the height change.
     open var heightChangeUserActionsBlock: HeightChangeUserActionsBlockType?
-    
+
     /// The maximum number of lines before enabling scrolling. The default value is `5`.
     @IBInspectable open var maximumNumberOfLines: Int = 5 {
         didSet {
@@ -113,7 +104,7 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
             refreshHeightIfNeededAnimated(false)
         }
     }
-    
+
     /// The minimum number of lines. The default value is `1`.
     @IBInspectable open var minimumNumberOfLines: Int = 1 {
         didSet {
@@ -125,7 +116,7 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
             refreshHeightIfNeededAnimated(false)
         }
     }
-    
+
     /// The current displayed number of lines. This value is calculated at run time.
     open var numberOfLines: Int {
         var numberOfLines = 0
@@ -143,22 +134,22 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
         }
         return numberOfLines
     }
-    
+
     // MARK: - Superclass Properties
-    
+
     open override var attributedPlaceholder: NSAttributedString? {
         didSet {
             refreshHeightIfNeededAnimated(false)
         }
     }
 
-    override open var attributedText: NSAttributedString! {
+    open override var attributedText: NSAttributedString! {
         didSet {
             refreshHeightIfNeededAnimated(false)
         }
     }
-    
-    override open var contentSize: CGSize {
+
+    open override var contentSize: CGSize {
         didSet {
             guard !oldValue.equalTo(contentSize) else {
                 return
@@ -170,48 +161,47 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
             }
         }
     }
-    
-    override open var intrinsicContentSize: CGSize {
+
+    open override var intrinsicContentSize: CGSize {
         if heightConstraint != nil {
             return CGSize(width: UIView.noIntrinsicMetric, height: UIView.noIntrinsicMetric)
         } else {
             return CGSize(width: UIView.noIntrinsicMetric, height: calculatedHeight)
         }
     }
-    
+
     // MARK: - Object Lifecycle
-    
+
     deinit {
-        
         NotificationCenter.default.removeObserver(self, name: UITextView.textDidChangeNotification, object: self)
     }
-    
-    required public init?(coder aDecoder: NSCoder) {
+
+    public required init?(coder aDecoder: NSCoder) {
         calculationLayoutManager.addTextContainer(calculationTextContainer)
         super.init(coder: aDecoder)
         commonInitializer()
     }
-    
-    override public init(frame: CGRect, textContainer: NSTextContainer?) {
+
+    public override init(frame: CGRect, textContainer: NSTextContainer?) {
         calculationLayoutManager.addTextContainer(calculationTextContainer)
         super.init(frame: frame, textContainer: textContainer)
         commonInitializer()
     }
-    
+
     // MARK: - Actions
-    
+
     @objc private func handleRSKGrowingTextViewTextDidChangeNotification(_ notification: Notification) {
-        
         refreshHeightIfNeededAnimated(animateHeightChange)
     }
-    
+
     // MARK: - Private API
-    
+
     private func commonInitializer() {
         contentInset = UIEdgeInsets(top: 1.0, left: 0.0, bottom: 1.0, right: 0.0)
         scrollsToTop = false
         showsVerticalScrollIndicator = false
-        
+
+        // ①便利约束，替换高度约束
         for constraint in constraints {
             if constraint.firstAttribute == .height && constraint.relation == .equal {
                 heightConstraint = constraint
@@ -219,13 +209,15 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
                 break
             }
         }
-        
+
+        // ②注册textDidChangeNotification的通知
         NotificationCenter.default.addObserver(self, selector: #selector(RSKGrowingTextView.handleRSKGrowingTextViewTextDidChangeNotification(_:)), name: UITextView.textDidChangeNotification, object: self)
     }
-    
+
+    /// 计算为N行时的高度
     private func heightForNumberOfLines(_ numberOfLines: Int) -> CGFloat {
         var height = contentInset.top + contentInset.bottom + textContainerInset.top + textContainerInset.bottom
-        
+
         var numberOfNonEmptyLines = 0
         var index = 0
         let numberOfGlyphs = calculationLayoutManager.numberOfGlyphs
@@ -239,10 +231,10 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
             index = NSMaxRange(lineRange)
             numberOfNonEmptyLines += 1
         }
-        
+
         let numberOfEmptyLines = (numberOfLines - numberOfNonEmptyLines)
         if numberOfEmptyLines > 0 {
-            let font = (self.typingAttributes[.font] as? UIFont) ?? self.font ?? UIFont.systemFont(ofSize: UIFont.systemFontSize)
+            let font = (typingAttributes[.font] as? UIFont) ?? self.font ?? UIFont.systemFont(ofSize: UIFont.systemFontSize)
             var lineHeight = font.lineHeight
             if let paragraphStyle = self.typingAttributes[.paragraphStyle] as? NSParagraphStyle {
                 if paragraphStyle.lineHeightMultiple > 0.0 {
@@ -257,17 +249,21 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
             }
             height += lineHeight * CGFloat(numberOfEmptyLines)
         }
-        
+
         return ceil(height)
     }
-    
+
+    /// ③更新高度，若有必要
     private func refreshHeightIfNeededAnimated(_ animated: Bool) {
         let oldHeight = bounds.height
-        let newHeight = calculatedHeight
-        
+        let newHeight = calculatedHeight // ④计算新的高度
+
+        // ⑤.① 高度有变化
         if oldHeight != newHeight {
+            // 封装为闭包，按照有无动画顺序执行
             typealias HeightChangeSetHeightBlockType = ((_ oldHeight: CGFloat, _ newHeight: CGFloat) -> Void)
             let heightChangeSetHeightBlock: HeightChangeSetHeightBlockType = { (oldHeight: CGFloat, newHeight: CGFloat) -> Void in
+                // ⑥改变高度
                 self.setHeight(newHeight)
                 self.heightChangeUserActionsBlock?(oldHeight, newHeight)
                 self.superview?.layoutIfNeeded()
@@ -275,6 +271,7 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
             typealias HeightChangeCompletionBlockType = ((_ oldHeight: CGFloat, _ newHeight: CGFloat) -> Void)
             let heightChangeCompletionBlock: HeightChangeCompletionBlockType = { (oldHeight: CGFloat, newHeight: CGFloat) -> Void in
                 self.layoutManager.ensureLayout(for: self.textContainer)
+                // ⑦滚动到关心的区域
                 self.scrollToVisibleCaretIfNeeded()
                 self.growingTextViewDelegate?.growingTextView?(self, didChangeHeightFrom: oldHeight, to: newHeight)
             }
@@ -287,7 +284,7 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
                     animations: { () -> Void in
                         heightChangeSetHeightBlock(oldHeight, newHeight)
                     },
-                    completion: { (finished: Bool) -> Void in
+                    completion: { (_: Bool) -> Void in
                         heightChangeCompletionBlock(oldHeight, newHeight)
                     }
                 )
@@ -295,19 +292,19 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
                 heightChangeSetHeightBlock(oldHeight, newHeight)
                 heightChangeCompletionBlock(oldHeight, newHeight)
             }
-        } else {
+        } else { // ⑤.② 高度有变化
             scrollToVisibleCaretIfNeeded()
         }
     }
-    
+
     private func scrollRectToVisibleConsideringInsets(_ rect: CGRect) {
         let insets = UIEdgeInsets(top: contentInset.top + textContainerInset.top, left: contentInset.left + textContainerInset.left + textContainer.lineFragmentPadding, bottom: contentInset.bottom + textContainerInset.bottom, right: contentInset.right + textContainerInset.right)
         let visibleRect = bounds.inset(by: insets)
-        
+
         guard !visibleRect.contains(rect) else {
             return
         }
-        
+
         var contentOffset = self.contentOffset
         if rect.minY < visibleRect.minY {
             contentOffset.y = rect.minY - insets.top * 2
@@ -316,19 +313,19 @@ public typealias HeightChangeUserActionsBlockType = ((_ oldHeight: CGFloat, _ ne
         }
         setContentOffset(contentOffset, animated: false)
     }
-    
+
     private func scrollToVisibleCaretIfNeeded() {
         guard let textPosition = selectedTextRange?.end else {
             return
         }
-        
+
         if textStorage.editedRange.location == NSNotFound && !isDragging && !isDecelerating {
             let caretRect = self.caretRect(for: textPosition)
             let caretCenterRect = CGRect(x: caretRect.midX, y: caretRect.midY, width: 0.0, height: 0.0)
             scrollRectToVisibleConsideringInsets(caretCenterRect)
         }
     }
-    
+
     private func setHeight(_ height: CGFloat) {
         if let heightConstraint = self.heightConstraint {
             heightConstraint.constant = height
